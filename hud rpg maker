@@ -1,0 +1,434 @@
+#====================================================================#
+#                         Synchronize Hud                            #
+#                                                                    #
+# Autor: Miguel8884                                                  #
+#                                                                    #
+# O script cria uma hud no mapa onde mostram-se o HP e MP, uma hud   #
+# bem simples, que pode ter suas imagens alteradas além de executar  #
+# um som após o hp estar abaixo de tal porcentagem também definivel. #
+# Também pode ter suporte para todos os membros do grupo             #
+#====================================================================#
+
+module SHUD
+ 
+  on = true
+  off = false
+ 
+#====================================================================#
+# Configurações                                                      #
+#====================================================================# 
+  
+DISABLE_SWITCH = 15
+
+  HP = on # Mostrar o HP na hud? #
+ 
+  HP2 = off # Mostrar o HP do segundo personagem na hud #
+ 
+  HP3 = off # Mostrar o HP do terceiro personagem na hud #
+ 
+  HP4 = off # Mostrar o HP do quarto personagem na hud #
+ 
+  MP = on # Mostrar o MP na hud? #
+ 
+  Back = on # Mostrar o Background na hud? #
+ 
+  HP_XY = [39,15] # X e Y do HP respectivamente #
+ 
+  HP2_XY = [425,15] # X e Y do HP do segundo personagem respectivamente #
+ 
+  HP3_XY = [29,380] # X e Y do HP do terceiro personagem respectivamente #
+ 
+  HP4_XY = [425,380] # X e Y do HP do quarto personagem respectivamente #
+ 
+  MP_XY = [39,29] # X e Y do MP respectivamente #
+ 
+  Back_XY = [16,6] # X e Y do Background respectivamente #
+ 
+  Back_Img = "Back" # Nome do Background na pasta system #
+ 
+  MP_Img = "MP" # Nome do MP na pasta system #
+ 
+  HP_Img = "HP" # Nome do HP na pasta system #
+ 
+  HP2_Img = "HP" # Nome do HP do segundo personagem na pasta system #
+ 
+  HP3_Img = "HP" # Nome do HP do terceiro personagem na pasta system #
+ 
+  HP4_Img = "HP" # Nome do HP do quarto personagem na pasta system #
+ 
+  Actor_NDAN = on # Criar o nome do herói na hud? #
+ 
+  Actor2_NDAN = off # Criar o nome do segundo herói na hud? #
+ 
+  Actor3_NDAN = off # Criar o nome do terceiro herói na hud? #
+ 
+  Actor4_NDAN = off # Criar o nome do quarto herói na hud? #
+ 
+  Actor_Name_XY = [-16,51] # Posição do nome do personagem X e Y respectivamente #
+ 
+  Actor2_Name_XY = [400,51] # Posição do nome do segundo personagem X  e Y #
+ 
+  Actor3_Name_XY = [-16,400] # Posição do nome do terceiro personagem X e Y #
+ 
+  Actor4_Name_XY = [400,400] # Posição do nome do quarto personagem X e Y #
+ 
+  Actors_Name_FS = 17 # Tamanho da fonte nos nomes dos actors #
+ 
+ 
+#====================================================================#
+# Configurações do som                                               #
+#====================================================================#
+
+  Sound_Hud = on
+
+# Tipo de som que será executado, respectivamente, SE, ME, BGS. Deixe o que for usar
+# em on e o que não for em off, nota, nunca deixe os dois em on para não ocorre-
+# rem futuros problemas! #
+
+  Lower_HP_type = [on,off,off]
+ 
+# Aqui são configurações básicas do som #
+ 
+  Lower_HP_Sound = "Mystery" # Nome do som que será produzido quando tiver pouco hp #
+ 
+  Lower_HP_Qtd = 40 # Quantidade de hp para baixo que será executado o som #
+ 
+  Volume = 60 # Volume  do som #
+ 
+#====================================================================#
+# Fim das configurações do som                                       #
+#====================================================================#
+ 
+#====================================================================#
+# Fim das configurações                                              #
+#====================================================================# 
+ 
+end
+
+#====================================================================#
+# Não Mexer                                                          #
+#====================================================================# 
+
+#====================================================================#
+# Começa o script                                                    #
+#====================================================================#
+
+#====================================================================#
+# Classe Scene_Map modificada para aparecer a hud                    #
+#====================================================================#
+
+class Scene_Map < Scene_Base
+  include SHUD
+  alias new_start start
+  alias new_update update
+  alias new_terminate terminate
+ 
+#====================================================================#
+# Quando a Scene inicia                                              #
+#====================================================================#
+ 
+  def start
+    new_start
+    @actor1 = $game_party.members[0]
+    @actor2 = $game_party.members[1]
+    @actor3 = $game_party.members[2]
+    @actor4 = $game_party.members[3]
+    create_hud
+    update_variables
+    translate_hp
+    draw_names
+  end
+ 
+#====================================================================#
+# Atualiza a Scene                                                   #
+#====================================================================#
+ 
+  def update
+    new_update
+    update_if_necessary
+    update_variables
+    translate_hp
+    if @hpp <= Lower_HP_Qtd
+      sound_lower_hp
+    end
+  end
+ 
+#====================================================================#
+# Ao final da Scene ao sair dela tudo aqui acontece                  #
+#====================================================================#
+ 
+  def terminate
+    new_terminate
+    dispose_imgs
+  end
+ 
+#--------------------------------------------------------------------#
+ 
+#====================================================================#
+# Criação da hud                                                     #
+#====================================================================#
+
+  def draw_names
+    draw_actor_name if Actor_NDAN == true
+    draw_actor2_name if Actor2_NDAN == true
+    draw_actor3_name if Actor3_NDAN == true
+    draw_actor4_name if Actor4_NDAN == true
+  end
+
+  def create_hud
+    create_sprites
+    create_bitmaps
+    sprite_posicion
+    bitmap_wah
+    draw_hero_hp if HP == true
+    draw_hero_hp_2 if HP2 == true
+    draw_hero_hp_3 if HP3 == true
+    draw_hero_hp_4 if HP4 == true
+    draw_hero_mp if MP == true
+  end
+ 
+#====================================================================#
+# Criação dos sprites, as iamgens da hud                             #
+#====================================================================#
+ 
+  def create_sprites
+    @hp = Sprite.new if HP == true
+    @hp2 = Sprite.new if HP2 == true
+    @hp3 = Sprite.new if HP3 == true
+    @hp4 = Sprite.new if HP4 == true
+    @mp = Sprite.new if MP == true
+    @back = Sprite.new if Back == true
+  end
+ 
+#====================================================================#
+# Criação dos bitmaps da hud                                         #
+#====================================================================#
+ 
+  def create_bitmaps
+    @hp.bitmap = Bitmap.new("Graphics/System/#{HP_Img}") if HP == true
+    @hp2.bitmap = Bitmap.new("Graphics/System/#{HP2_Img}") if HP2 == true
+    @hp3.bitmap = Bitmap.new("Graphics/System/#{HP3_Img}") if HP3 == true
+    @hp4.bitmap = Bitmap.new("Graphics/System/#{HP4_Img}") if HP4 == true
+    @mp.bitmap = Bitmap.new("Graphics/System/#{MP_Img}") if MP == true
+    @back.bitmap = Bitmap.new("Graphics/System/#{Back_Img}") if Back == true
+  end
+ 
+#====================================================================#
+# Posição dos bitmaps/imagens da hud                                 #
+#====================================================================#
+ 
+  def sprite_posicion
+    @hp.x = HP_XY[0] if HP == true
+    @hp.y = HP_XY[1] if HP == true
+    @hp2.x = HP2_XY[0] if HP2 == true
+    @hp2.y = HP2_XY[1] if HP2 == true
+    @hp3.x = HP3_XY[0] if HP3 == true
+    @hp3.y = HP3_XY[1] if HP3 == true
+    @hp4.x = HP4_XY[0] if HP4 == true
+    @hp4.y = HP4_XY[1] if HP4 == true
+    @mp.x = MP_XY[0] if MP == true
+    @mp.y = MP_XY[1] if MP == true
+    @back.x = Back_XY[0] if Back == true
+    @back.y = Back_XY[1] if Back == true
+  end
+ 
+#====================================================================#
+# Recolhe o tamanho das imagens                                      #
+#====================================================================#
+ 
+  def bitmap_wah
+    @hp_w = @hp.bitmap.width if HP == true
+    @hp_h = @hp.bitmap.height if HP == true
+    @hp2_w = @hp2.bitmap.width if HP2 == true
+    @hp2_h = @hp2.bitmap.height if HP2 == true
+    @hp3_w = @hp3.bitmap.width if HP3 == true
+    @hp3_h = @hp3.bitmap.height if HP3 == true
+    @hp4_w = @hp4.bitmap.width if HP4 == true
+    @hp4_h = @hp4.bitmap.height if HP4 == true
+    @mp_w = @mp.bitmap.width if MP == true
+    @mp_h = @mp.bitmap.height if MP == true
+  end
+ 
+#====================================================================#
+# Apaga as imagens                                                   #
+#====================================================================#
+ 
+  def dispose_imgs
+    @hp.dispose if HP == true
+    @hp2.dispose if HP2 == true
+    @hp3.dispose if HP3 == true
+    @hp4.dispose if HP4 == true
+    @mp.dispose if MP == true
+    @back.dispose if Back == true
+    @name.dispose if Actor_NDAN == true
+    @name2.dispose if Actor2_NDAN == true
+    @name3.dispose if Actor3_NDAN == true
+    @name4.dispose if Actor4_NDAN == true
+  end
+ 
+#====================================================================#
+# Desenha o hp na hud                                                #
+#====================================================================#
+ 
+  def draw_hero_hp
+    @hp.bitmap.clear
+    @hp.bitmap = Bitmap.new(@hp_w,@hp_h)
+    hpw = @hp_w * @actor1.hp / @actor1.mhp
+    hph = @hp_h
+    hp_rect = Rect.new(0,0,hpw,hph)
+    @hp.bitmap.blt(0,0,Cache.system("#{HP_Img}"),hp_rect)
+  end
+ 
+  def draw_hero_hp_2
+    @hp2.bitmap.clear
+    @hp2.bitmap = Bitmap.new(@hp2_w,@hp2_h)
+    hpw = @hp_w * @actor2.hp / @actor2.mhp
+    hph = @hp_h
+    hp_rect = Rect.new(0,0,hpw,hph)
+    @hp2.bitmap.blt(0,0,Cache.system("#{HP2_Img}"),hp_rect)
+  end
+ 
+  def draw_hero_hp_3
+    @hp3.bitmap.clear
+    @hp3.bitmap = Bitmap.new(@hp3_w,@hp3_h)
+    hpw = @hp_w * @actor3.hp / @actor3.mhp
+    hph = @hp_h
+    hp_rect = Rect.new(0,0,hpw,hph)
+    @hp3.bitmap.blt(0,0,Cache.system("#{HP3_Img}"),hp_rect)
+  end
+ 
+  def draw_hero_hp_4
+    @hp4.bitmap.clear
+    @hp4.bitmap = Bitmap.new(@hp4_w,@hp4_h)
+    hpw = @hp_w * @actor4.hp / @actor4.mhp
+    hph = @hp_h
+    hp_rect = Rect.new(0,0,hpw,hph)
+    @hp4.bitmap.blt(0,0,Cache.system("#{HP4_Img}"),hp_rect)
+  end
+ 
+#====================================================================#
+# Desenha o mp na hud                                                #
+#====================================================================#
+ 
+  def draw_hero_mp
+    @mp.bitmap.clear
+    @mp.bitmap = Bitmap.new(@mp_w,@mp_h)
+    mpw = @mp_w * @actor1.mp / @actor1.mmp
+    mph = @mp_h
+    mp_rect = Rect.new(0,0,mpw,mph)
+    @mp.bitmap.blt(0,0,Cache.system("#{MP_Img}"),mp_rect)
+  end
+ 
+#====================================================================#
+# Atualiza as variáveis de HP e MP                                   #
+#====================================================================#
+ 
+  def update_variables
+    @actor1_hp = @actor1.hp if HP == true
+    @actor2_hp = @actor2.hp if HP2 == true
+    @actor3_hp = @actor3.hp if HP3 == true
+    @actor4_hp = @actor4.hp if HP4 == true
+    @actor1_mp = @actor1.mp if MP == true
+  end
+ 
+#====================================================================#
+# Metodo de atualização da hud, verifica se a mesma é necessária     #
+#====================================================================#
+ 
+  def update_if_necessary
+    draw_hero_hp if update_hp? if HP == true
+    draw_hero_hp_2 if update_hp_2? if HP2 == true
+    draw_hero_hp_3 if update_hp_3? if HP3 == true
+    draw_hero_hp_4 if update_hp_4? if HP4 == true
+    draw_hero_mp if update_mp? if MP == true
+  end
+ 
+#====================================================================#
+# Verifica se é necessária a atualização do HP                       #
+#====================================================================#
+ 
+  def update_hp?
+    return true unless @actor1_hp == @actor1.hp if HP == true
+    return true unless @actor1_mhp == @actor1.mhp if HP == true
+  end
+ 
+  def update_hp_2?
+    return true unless @actor2_hp == @actor2.hp if HP2 == true
+    return true unless @actor2_mhp == @actor2.mhp if HP2 == true
+  end
+ 
+  def update_hp_3?
+    return true unless @actor3_hp == @actor3.hp if HP3 == true
+    return true unless @actor3_mhp == @actor3.mhp if HP3 == true
+  end
+ 
+  def update_hp_4?
+    return true unless @actor4_hp == @actor4.hp if HP4 == true
+    return true unless @actor4_mhp == @actor4.mhp if HP4 == true
+  end
+ 
+#====================================================================#
+# Verifica se é necessária a atualização do MP                       #
+#====================================================================#
+ 
+  def update_mp?
+    return true unless @actor1_mp == @actor1.mp if MP == true
+    return true unless @actor1_mmp == @actor1.mmp if MP == true
+  end
+ 
+#--------------------------------------------------------------------#
+ 
+#====================================================================#
+# Metodo de criação do som                                           #
+#====================================================================#
+ 
+  def sound_lower_hp
+    if Sound == true and Lower_HP_type[1] == true
+      RPG::SE.new(Lower_HP_Sound, @volume = Volume).play
+    elsif Sound == true and Lower_HP_type[0] == true
+      RPG::ME.new(Lower_HP_Sound, @volume = Volume).play
+    elsif Sound == true and Lower_HP_type[2] == true
+      RPG::BGS.new(Lower_HP_Sound, @volume = Volume).play
+    end
+  end
+ 
+#====================================================================#
+# Transformação do HP em %(porcentagem)                              #
+#====================================================================#
+ 
+  def translate_hp
+    @hpp = @actor1.hp * 100 / @actor1.mhp
+  end
+ 
+  def draw_actor_name
+    @name = Sprite.new
+    @name.bitmap = Bitmap.new(544,416)
+    @name.bitmap.font.size = Actors_Name_FS
+    @name.bitmap.draw_text(Actor_Name_XY[0],Actor_Name_XY[1],100,20,@actor1.name,1)
+  end
+ 
+  def draw_actor2_name
+    @name2 = Sprite.new
+    @name2.bitmap = Bitmap.new(544,416)
+    @name2.bitmap.font.size = Actors_Name_FS
+    @name2.bitmap.draw_text(Actor2_Name_XY[0],Actor2_Name_XY[1],100,20,@actor2.name,1)
+  end
+ 
+  def draw_actor3_name
+    @name3 = Sprite.new
+    @name3.bitmap = Bitmap.new(544,416)
+    @name3.bitmap.font.size = Actors_Name_FS
+    @name3.bitmap.draw_text(Actor3_Name_XY[0],Actor3_Name_XY[1],100,20,@actor3.name,1)
+  end
+ 
+  def draw_actor4_name
+    @name4 = Sprite.new
+    @name4.bitmap = Bitmap.new(544,416)
+    @name4.bitmap.font.size = Actors_Name_FS
+    @name4.bitmap.draw_text(Actor4_Name_XY[0],Actor4_Name_XY[1],100,20,@actor4.name,1)
+  end
+end
+
+#====================================================================#
+# Fim do Script                                                      #
+#====================================================================#
